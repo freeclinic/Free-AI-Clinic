@@ -51,7 +51,12 @@ async function diagnose(){
   loader.style.display='block'; result.textContent='';
   try{
     // Demo fallback using DxGPT mirror
-    const res = await fetch('https://api.dxgpt.app/v1/diagnose',{
+    const res = await fetch('https://demo.medplum.com/fhir/R4/Condition', {
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({resourceType:'Parameters',parameter:[{name:'symptom',valueString:s}]})
+});
+    
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({prompt:s,topk:5})
