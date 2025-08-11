@@ -72,12 +72,9 @@ function diagnose() {
 
 /* ---------- Image Diagnosis (with TensorFlow.js) ---------- */
 
-// Replace this with the URL to your TensorFlow.js model.json file.
-// You can train or find a pre-trained model for pneumonia detection.
-// Example: Clone https://github.com/lironabutbul/tensorflowjs-pneumonia-detection and host the model folder.
-// For offline use, place the model files in the same directory and use relative path like './model/model.json'.
-// Note: Browser security may require running a local server for local files.
-const MODEL_URL = 'https://your-hosted-model/model.json'; // TODO: Replace with actual URL
+// For local/offline use, place the model files (model.json and *.bin) in a 'model' folder in the same directory.
+// Run a local server, e.g., python -m http.server, and access via http://localhost:8000
+const MODEL_URL = './model/model.json'; // Local path (requires local server due to browser security)
 
 let model;
 
@@ -88,7 +85,7 @@ async function loadModel() {
     console.log('Model loaded successfully');
   } catch (error) {
     console.error('Error loading model:', error);
-    alert('Failed to load AI model. Please check the model URL.');
+    alert('Failed to load AI model. Make sure the model files are in the "model" folder and you are running a local server.');
   }
 }
 loadModel();
@@ -101,7 +98,6 @@ async function imageDiagnose() {
   document.getElementById('result').innerHTML = '';
 
   if (file.type === 'application/pdf') {
-    // For PDFs (e.g., blood reports), keep the original message or add text extraction logic later
     setTimeout(() => {
       document.getElementById('result').innerHTML =
         '⚠️ PDF analysis not supported yet; upload to nearest hospital for review.';
@@ -117,24 +113,23 @@ async function imageDiagnose() {
     img.src = event.target.result;
     img.onload = async function () {
       if (!model) {
-        document.getElementById('result').innerHTML = '⚠️ AI model not loaded yet. Please try again later.';
+        document.getElementById('result').innerHTML = '⚠️ AI model not loaded. Please check the console for errors.';
         document.getElementById('loader').style.display = 'none';
         return;
       }
 
       try {
-        // Preprocess the image: resize to 224x224 (adjust based on your model input size), normalize
+        // Preprocess the image: resize to model's input size (e.g., 224x224 - confirm with your model)
         let tensor = tf.browser.fromPixels(img);
-        tensor = tf.image.resizeBilinear(tensor, [224, 224]); // Change size if your model uses different input
+        tensor = tf.image.resizeBilinear(tensor, [224, 224]); // Adjust size to match your model's input
         tensor = tensor.div(tf.scalar(255)); // Normalize to [0,1]
         tensor = tensor.expandDims(0); // Add batch dimension
 
         // Make prediction
         const prediction = await model.predict(tensor);
-        const prob = (await prediction.data())[0]; // Assuming binary classification (sigmoid output)
-
+        const prob = (await prediction.data())[0]; // Assuming binary classification (Normal vs. Pneumonia)
         let diagnosis = prob > 0.5 ? 'Pneumonia detected' : 'Normal';
-        let confidence = (prob * 100).toFixed(2);
+        let confidence = Math.abs(prob * 100 - 50 * (prob > 0.5 ? 1 : 0)).toFixed(2); // Simple confidence calculation
 
         document.getElementById('result').innerHTML =
           `🔍 Diagnosis: ${diagnosis}\n📊 Confidence: ${confidence}%\n⚠️ This is for educational purposes only – consult a doctor for accurate diagnosis.`;
